@@ -1,14 +1,14 @@
 package com.lmonkiewicz.spring.analyzer;
 
 import com.lmonkiewicz.spring.analyzer.config.AnalyzerProperties;
+import com.lmonkiewicz.spring.analyzer.config.LabelsProperties;
 import com.lmonkiewicz.spring.analyzer.config.RulesProperties;
 import com.lmonkiewicz.spring.analyzer.metadata.ApplicationMetadata;
 import com.lmonkiewicz.spring.analyzer.metadata.BeanMetadata;
 import com.lmonkiewicz.spring.analyzer.metadata.ContextMetadata;
-import com.lmonkiewicz.spring.analyzer.neo4j.BeanNode;
 import com.lmonkiewicz.spring.analyzer.neo4j.BeanRepository;
-import com.lmonkiewicz.spring.analyzer.neo4j.DependsOn;
 import com.lmonkiewicz.spring.analyzer.neo4j.DependsOnRepository;
+import com.lmonkiewicz.spring.analyzer.neo4j.model.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,8 +38,15 @@ class AnalyzerService {
     }
 
     public void processData() throws IOException {
+
         log.info("Loading beans data");
         ApplicationMetadata applicationMetadata = metadataProvider.getApplicationInfo();
+
+        if (analyzerProperties.isClearOnStart()) {
+            log.info("Clearing database");
+            dependsOnRepository.deleteAll();
+            beanRepository.deleteAll();
+        }
 
         log.info("Populating database...");
         applicationMetadata.getContexts().forEach(this::processContext);
@@ -59,7 +66,7 @@ class AnalyzerService {
 
         log.info("Processing dependencies of context: {}", contextMetadata.getContext());
 
-        final List<DependsOn> dependencies = beans.stream()
+        final List<DependsOnRelation> dependencies = beans.stream()
                 .filter(bean -> bean.getDependencies() != null && !bean.getDependencies().isEmpty())
                 .map(bean -> createRelationships(bean, beanNodes))
                 .flatMap(Collection::stream)
@@ -69,13 +76,13 @@ class AnalyzerService {
 
     }
 
-    private List<DependsOn> createRelationships(BeanMetadata bean, List<BeanNode> allNodes) throws RuntimeException {
+    private List<DependsOnRelation> createRelationships(BeanMetadata bean, List<BeanNode> allNodes) throws RuntimeException {
         final BeanNode startNode = findNode(bean.getBean(), allNodes);
 
         return bean.getDependencies().stream()
                 .map(dependency -> findNode(dependency, allNodes))
                 .filter(Objects::nonNull)
-                .map(dependency -> DependsOn.builder()
+                .map(dependency -> DependsOnRelation.builder()
                         .bean(startNode)
                         .dependency(dependency)
                         .build())
@@ -86,20 +93,40 @@ class AnalyzerService {
         return allNodes.stream()
                 .filter(node -> node.getName().equals(name))
                 .findFirst()
-//                .orElseThrow(() -> new RuntimeException("Bean not found: " + name));
                 .orElse(null);
     }
 
     private BeanNode transformToNode(BeanMetadata bean, ContextMetadata context) {
-        log.info("Processing bean: {}", bean.getBean());
+        log.info("Processing model: {}", bean.getBean());
 
-        return BeanNode.builder()
-                .name(bean.getBean())
-                .scope(bean.getScope())
-                .type(bean.getType())
-                .tags(createTags(bean))
-//                .labels(createLabels(bean))
-                .build();
+        final BeanNode node = createNode(bean);
+        node.setName(bean.getBean());
+        node.setScope(bean.getScope());
+        node.setType(bean.getType());
+        node.setTags(createTags(bean));
+
+        return node;
+    }
+
+    private BeanNode createNode(BeanMetadata bean) {
+        final LabelsProperties labelsProperties = Optional.ofNullable(analyzerProperties.getRules()).map(RulesProperties::getLabels).orElseGet(LabelsProperties::new);
+
+        final String type = bean.getType();
+        if (type.matches(labelsProperties.getConfiguration())) {
+            return new ConfigurationNode();
+        }
+        else if (type.matches(labelsProperties.getService())) {
+            return new ServiceNode();
+        }
+        else if (type.matches(labelsProperties.getController())) {
+            return new ControllerNode();
+        }
+        else if (type.matches(labelsProperties.getRepository())) {
+            return new RepositoryNode();
+        }
+        else {
+            return new BeanNode();
+        }
     }
 
     private Map<String, Boolean> createTags(BeanMetadata bean) {
@@ -114,23 +141,4 @@ class AnalyzerService {
         return beanTags;
     }
 
-    private List<String> createLabels(BeanMetadata bean) {
-        final List<String> labels = new ArrayList<>();
-
-        Optional.ofNullable(bean.getScope()).map(scope -> "SCOPE_"+scope.toUpperCase()).ifPresent(labels::add);
-
-
-        return labels;
-    }
-
-    private void processBean(BeanMetadata bean, ContextMetadata contextMetadata) {
-        log.info("Processing bean: {}", bean.getBean());
-        final BeanNode node = BeanNode.builder()
-                .name(bean.getBean())
-                .scope(bean.getScope())
-                .type(bean.getType())
-                .build();
-
-        beanRepository.save(node);
-    }
 }

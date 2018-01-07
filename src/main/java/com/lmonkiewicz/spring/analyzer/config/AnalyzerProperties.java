@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("analyzer")
 public class AnalyzerProperties {
 
+    private boolean clearOnStart = false;
     private SourceProperties source;
     private RulesProperties rules;
 }

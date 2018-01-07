@@ -1,4 +1,4 @@
-package com.lmonkiewicz.spring.analyzer.neo4j;
+package com.lmonkiewicz.spring.analyzer.neo4j.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +11,7 @@ import org.neo4j.ogm.annotation.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class DependsOn {
+public class DependsOnRelation {
 
     @Id
     @GeneratedValue

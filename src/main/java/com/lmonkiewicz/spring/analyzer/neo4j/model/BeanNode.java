@@ -1,15 +1,14 @@
-package com.lmonkiewicz.spring.analyzer.neo4j;
+package com.lmonkiewicz.spring.analyzer.neo4j.model;
 
-import lombok.*;
+import lombok.Data;
+import lombok.Singular;
 import org.neo4j.ogm.annotation.*;
-import org.neo4j.ogm.annotation.Properties;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 @Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
 @NodeEntity(label = "BEAN")
 public class BeanNode {
 

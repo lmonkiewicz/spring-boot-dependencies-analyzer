@@ -1,14 +1,15 @@
 analyzer:
+  clearOnStart: true
   source:
     resource: "/beans.json"
   rules:
-    include: 'com\.example\..*'
+    labels:
+      repository: '.*Repository'
+      controller: '.*Controller'
+      service: '.*Service'
+      configuration: '.*Configuration'
     tags:
       App: 'com\.example\..*'
-      Repository: '.*Repository'
-      Bean: '.*Bean'
-      Controller: '.*Controller'
-      Service: '.*Service'
 
 spring:
   data:
