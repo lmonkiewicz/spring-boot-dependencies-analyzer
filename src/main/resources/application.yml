@@ -1,0 +1,18 @@
+analyzer:
+  source:
+    resource: "/beans.json"
+  rules:
+    include: 'com\.example\..*'
+    tags:
+      App: 'com\.example\..*'
+      Repository: '.*Repository'
+      Bean: '.*Bean'
+      Controller: '.*Controller'
+      Service: '.*Service'
+
+spring:
+  data:
+    neo4j:
+      uri: "bolt://192.168.99.100:7687"
+      username: "neo4j"
+      password: "admin"
