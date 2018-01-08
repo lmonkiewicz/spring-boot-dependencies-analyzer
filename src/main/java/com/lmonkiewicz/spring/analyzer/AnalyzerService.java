@@ -1,15 +1,16 @@
 package com.lmonkiewicz.spring.analyzer;
 
 import com.lmonkiewicz.spring.analyzer.config.AnalyzerProperties;
-import com.lmonkiewicz.spring.analyzer.config.LabelsProperties;
 import com.lmonkiewicz.spring.analyzer.config.RulesProperties;
 import com.lmonkiewicz.spring.analyzer.metadata.ApplicationMetadata;
 import com.lmonkiewicz.spring.analyzer.metadata.BeanMetadata;
 import com.lmonkiewicz.spring.analyzer.metadata.ContextMetadata;
 import com.lmonkiewicz.spring.analyzer.neo4j.BeanRepository;
 import com.lmonkiewicz.spring.analyzer.neo4j.DependsOnRepository;
-import com.lmonkiewicz.spring.analyzer.neo4j.model.*;
+import com.lmonkiewicz.spring.analyzer.neo4j.model.BeanNode;
+import com.lmonkiewicz.spring.analyzer.neo4j.model.DependsOnRelation;
 import lombok.extern.slf4j.Slf4j;
+import org.neo4j.ogm.session.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,16 +26,19 @@ class AnalyzerService {
     private final BeanRepository beanRepository;
     private final DependsOnRepository dependsOnRepository;
     private final AnalyzerProperties analyzerProperties;
+    private final Session session;
 
     @Autowired
     public AnalyzerService(MetadataProvider metadataProvider,
                            BeanRepository beanRepository,
                            DependsOnRepository dependsOnRepository,
-                           AnalyzerProperties analyzerProperties) {
+                           AnalyzerProperties analyzerProperties,
+                           Session session) {
         this.metadataProvider = metadataProvider;
         this.beanRepository = beanRepository;
         this.dependsOnRepository = dependsOnRepository;
         this.analyzerProperties = analyzerProperties;
+        this.session = session;
     }
 
     public void processData() throws IOException {
@@ -74,6 +78,18 @@ class AnalyzerService {
 
         dependsOnRepository.saveAll(dependencies);
 
+        addLabels();
+    }
+
+    private void addLabels() {
+        log.info("Adding labels");
+        final Map<String, String> labels = Optional.ofNullable(analyzerProperties.getRules()).map(RulesProperties::getLabels).orElse(new HashMap<>());
+
+
+        labels.forEach((label, regexp) -> {
+            final String query = "MATCH (n) WHERE n.type =~ '"+regexp+"' SET n :"+label;
+            session.query(query, new HashMap<>());
+        });
     }
 
     private List<DependsOnRelation> createRelationships(BeanMetadata bean, List<BeanNode> allNodes) throws RuntimeException {
@@ -99,46 +115,10 @@ class AnalyzerService {
     private BeanNode transformToNode(BeanMetadata bean, ContextMetadata context) {
         log.info("Processing model: {}", bean.getBean());
 
-        final BeanNode node = createNode(bean);
-        node.setName(bean.getBean());
-        node.setScope(bean.getScope());
-        node.setType(bean.getType());
-        node.setTags(createTags(bean));
-
-        return node;
+        return BeanNode.builder()
+                .name(bean.getBean())
+                .scope(bean.getScope())
+                .type(bean.getType())
+                .build();
     }
-
-    private BeanNode createNode(BeanMetadata bean) {
-        final LabelsProperties labelsProperties = Optional.ofNullable(analyzerProperties.getRules()).map(RulesProperties::getLabels).orElseGet(LabelsProperties::new);
-
-        final String type = bean.getType();
-        if (type.matches(labelsProperties.getConfiguration())) {
-            return new ConfigurationNode();
-        }
-        else if (type.matches(labelsProperties.getService())) {
-            return new ServiceNode();
-        }
-        else if (type.matches(labelsProperties.getController())) {
-            return new ControllerNode();
-        }
-        else if (type.matches(labelsProperties.getRepository())) {
-            return new RepositoryNode();
-        }
-        else {
-            return new BeanNode();
-        }
-    }
-
-    private Map<String, Boolean> createTags(BeanMetadata bean) {
-        final Map<String, Boolean> beanTags = new HashMap<>();
-
-        final RulesProperties rulesProperties = Optional.ofNullable(analyzerProperties.getRules()).orElseGet(RulesProperties::new);
-
-        final Map<String, String> tags = rulesProperties.getTags();
-        if (tags != null) {
-            tags.forEach((tagName, regexp) -> beanTags.put(tagName, bean.getType().matches(regexp)));
-        }
-        return beanTags;
-    }
-
 }

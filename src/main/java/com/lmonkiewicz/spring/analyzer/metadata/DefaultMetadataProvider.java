@@ -49,7 +49,6 @@ public class DefaultMetadataProvider implements MetadataProvider {
 
     private ApplicationMetadata loadFromResource(String resource) throws IOException {
         log.info("Loading beans metadata from resource: {}", resource);
-//        DefaultMetadataProvider.class.getResource()
         final InputStream inputStream = DefaultMetadataProvider.class.getResourceAsStream(resource);
 
         final List<ContextMetadata> contexts = objectMapper.readValue(inputStream,  new TypeReference<List<ContextMetadata>>(){});
