@@ -4,11 +4,16 @@ analyzer:
     resource: "/beans.json"
   rules:
     labels:
-      Repository: '.*Repository'
-      Controller: '.*Controller'
-      Service: '.*Service'
-      Configuration: '.*Configuration'
-      App: 'com.example\\..*'
+      type:
+        Repository: '.*Repository'
+        Controller: '.*Controller'
+        Service: '.*Service'
+        Configuration: '.*Configuration'
+        App: 'com.example\\..*'
+      name:
+        Service: '.*Service'
+      scope:
+        Singleton: 'singleton'
 
 spring:
   data:

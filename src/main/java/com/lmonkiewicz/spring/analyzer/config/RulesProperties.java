@@ -7,7 +7,7 @@ import java.util.Map;
 @Data
 public class RulesProperties {
     private Map<String, String> tags;
-    private Map<String, String> labels;
+    private LabelsProperties labels;
 
 //    private LabelsProperties labels = new LabelsProperties();
 }

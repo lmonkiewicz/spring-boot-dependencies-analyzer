@@ -1,6 +1,7 @@
 package com.lmonkiewicz.spring.analyzer;
 
 import com.lmonkiewicz.spring.analyzer.config.AnalyzerProperties;
+import com.lmonkiewicz.spring.analyzer.config.LabelsProperties;
 import com.lmonkiewicz.spring.analyzer.config.RulesProperties;
 import com.lmonkiewicz.spring.analyzer.metadata.ApplicationMetadata;
 import com.lmonkiewicz.spring.analyzer.metadata.BeanMetadata;
@@ -83,11 +84,18 @@ class AnalyzerService {
 
     private void addLabels() {
         log.info("Adding labels");
-        final Map<String, String> labels = Optional.ofNullable(analyzerProperties.getRules()).map(RulesProperties::getLabels).orElse(new HashMap<>());
+        final Optional<LabelsProperties> labelsProperties = Optional.ofNullable(analyzerProperties.getRules())
+                .map(RulesProperties::getLabels);
 
+        labelsProperties.map(LabelsProperties::getType).ifPresent(labels -> createLabelsByRegexp("type", labels));
+        labelsProperties.map(LabelsProperties::getName).ifPresent(labels -> createLabelsByRegexp("name", labels));
+        labelsProperties.map(LabelsProperties::getScope).ifPresent(labels -> createLabelsByRegexp("scope", labels));
+    }
 
+    private void createLabelsByRegexp(final String field, final Map<String, String> labels) {
         labels.forEach((label, regexp) -> {
-            final String query = "MATCH (n) WHERE n.type =~ '"+regexp+"' SET n :"+label;
+            final String query = String.format("MATCH (n) WHERE n.%s =~ '%s' SET n :%s", field, regexp, label);
+            log.info("Setting labels with query: {}", query);
             session.query(query, new HashMap<>());
         });
     }
