@@ -1,4 +1,4 @@
-package com.lmonkiewicz.spring.analyzer.adapter.neo4j.model;
+package com.lmonkiewicz.spring.analyzer.adapter.neo4j;
 
 import lombok.Builder;
 import lombok.Data;
@@ -22,6 +22,7 @@ public class BeanNode {
     private String name;
     private String type;
     private String scope;
+    private String context;
 
     @Relationship(type = "DEPENDS_ON")
     @Singular

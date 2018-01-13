@@ -1,4 +1,4 @@
-package com.lmonkiewicz.spring.analyzer.domain.condition;
+package com.lmonkiewicz.spring.analyzer.domain.dto.condition;
 
 import lombok.Value;
 

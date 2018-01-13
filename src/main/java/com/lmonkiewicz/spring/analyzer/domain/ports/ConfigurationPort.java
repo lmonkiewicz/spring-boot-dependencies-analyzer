@@ -1,6 +1,6 @@
 package com.lmonkiewicz.spring.analyzer.domain.ports;
 
-import com.lmonkiewicz.spring.analyzer.domain.LabelingRules;
+import com.lmonkiewicz.spring.analyzer.domain.dto.configuration.LabelingRules;
 
 import java.util.Optional;
 

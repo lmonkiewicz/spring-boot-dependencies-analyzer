@@ -1,4 +1,4 @@
-package com.lmonkiewicz.spring.analyzer.app;
+package com.lmonkiewicz.spring.analyzer;
 
 import com.lmonkiewicz.spring.analyzer.domain.AnalyzerAPI;
 import com.lmonkiewicz.spring.analyzer.domain.exception.AnalyzerException;

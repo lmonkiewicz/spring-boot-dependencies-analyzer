@@ -1,17 +1,17 @@
 package com.lmonkiewicz.spring.analyzer.domain.ports;
 
-import com.lmonkiewicz.spring.analyzer.adapter.neo4j.model.BeanNode;
-import com.lmonkiewicz.spring.analyzer.adapter.neo4j.model.DependsOnRelation;
-import com.lmonkiewicz.spring.analyzer.domain.condition.Condition;
+import com.lmonkiewicz.spring.analyzer.domain.dto.condition.Condition;
+import com.lmonkiewicz.spring.analyzer.domain.dto.graph.BeanDTO;
+import com.lmonkiewicz.spring.analyzer.domain.dto.graph.DependencyDTO;
 
 import java.util.List;
 
 public interface GraphPort {
     void clear();
 
-    void createNodes(List<BeanNode> nodes);
+    List<BeanDTO> createNodes(List<BeanDTO> nodes);
 
-    void createNodeRelations(List<DependsOnRelation> relations);
+    void createNodeRelations(List<DependencyDTO> relations);
 
     void addLabels(Condition condition, String label);
 }

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lmonkiewicz.spring.analyzer.adapter.configuration.PropertiesConfigurationAdapter;
 import com.lmonkiewicz.spring.analyzer.adapter.metadata.DefaultMetadataProviderAdapter;
 import com.lmonkiewicz.spring.analyzer.adapter.neo4j.BeanRepository;
-import com.lmonkiewicz.spring.analyzer.adapter.neo4j.DependsOnRepository;
 import com.lmonkiewicz.spring.analyzer.adapter.neo4j.Neo4jGraphPortAdapter;
 import com.lmonkiewicz.spring.analyzer.config.properties.AnalyzerProperties;
 import com.lmonkiewicz.spring.analyzer.domain.AnalyzerAPI;
@@ -16,7 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class ApiConfiguration {
+public class AnalyzerApiConfiguration {
 
     @Bean
     MetadataProviderPort metadataProviderPort(AnalyzerProperties analyzerProperties, ObjectMapper objectMapper){
@@ -24,8 +23,8 @@ public class ApiConfiguration {
     }
 
     @Bean
-    GraphPort graphPort(Session session, DependsOnRepository dependsOnRepository, BeanRepository beanRepository) {
-        return new Neo4jGraphPortAdapter(beanRepository, dependsOnRepository, session);
+    GraphPort graphPort(Session session, BeanRepository beanRepository) {
+        return new Neo4jGraphPortAdapter(beanRepository, session);
     }
 
     @Bean
@@ -34,7 +33,7 @@ public class ApiConfiguration {
     }
 
     @Bean
-    AnalyzerAPI analyzerApi(MetadataProviderPort metadataProviderPort, AnalyzerProperties analyzerProperties, GraphPort graphPort) {
-        return new AnalyzerAPI(graphPort, analyzerProperties, metadataProviderPort);
+    AnalyzerAPI analyzerApi(MetadataProviderPort metadataProviderPort, ConfigurationPort configurationPort, GraphPort graphPort) {
+        return new AnalyzerAPI(graphPort, configurationPort, metadataProviderPort);
     }
 }

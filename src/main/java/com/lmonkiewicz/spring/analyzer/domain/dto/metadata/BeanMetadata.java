@@ -1,4 +1,4 @@
-package com.lmonkiewicz.spring.analyzer.domain.metadata;
+package com.lmonkiewicz.spring.analyzer.domain.dto.metadata;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

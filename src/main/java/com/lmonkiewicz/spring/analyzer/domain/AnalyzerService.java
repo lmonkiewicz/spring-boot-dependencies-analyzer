@@ -1,19 +1,24 @@
 package com.lmonkiewicz.spring.analyzer.domain;
 
-import com.lmonkiewicz.spring.analyzer.adapter.neo4j.model.BeanNode;
-import com.lmonkiewicz.spring.analyzer.adapter.neo4j.model.DependsOnRelation;
-import com.lmonkiewicz.spring.analyzer.domain.condition.RegexpFieldCondition;
-import com.lmonkiewicz.spring.analyzer.domain.metadata.ApplicationMetadata;
-import com.lmonkiewicz.spring.analyzer.domain.metadata.BeanMetadata;
-import com.lmonkiewicz.spring.analyzer.domain.metadata.ContextMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.dto.condition.RegexpFieldCondition;
+import com.lmonkiewicz.spring.analyzer.domain.dto.configuration.LabelingRules;
+import com.lmonkiewicz.spring.analyzer.domain.dto.graph.BeanDTO;
+import com.lmonkiewicz.spring.analyzer.domain.dto.graph.DependencyDTO;
+import com.lmonkiewicz.spring.analyzer.domain.dto.metadata.ApplicationMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.dto.metadata.BeanMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.dto.metadata.ContextMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.ports.ConfigurationPort;
 import com.lmonkiewicz.spring.analyzer.domain.ports.GraphPort;
 import com.lmonkiewicz.spring.analyzer.domain.ports.MetadataProviderPort;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 class AnalyzerService {
@@ -50,26 +55,24 @@ class AnalyzerService {
         log.info("Processing context: {}", contextMetadata.getContext());
         final List<BeanMetadata> beans = contextMetadata.getBeans();
 
-        final List<BeanNode> beanNodes = createNodes(contextMetadata, beans);
+        final List<BeanDTO> beanNodes = createNodes(contextMetadata, beans);
 
         createRelations(contextMetadata, beans, beanNodes);
         createLabels();
     }
 
-    private List<BeanNode> createNodes(ContextMetadata contextMetadata, List<BeanMetadata> beans) {
-        final List<BeanNode> beanNodes = beans.stream()
-                .map(bean -> transformToNode(bean, contextMetadata))
+    private List<BeanDTO> createNodes(ContextMetadata contextMetadata, List<BeanMetadata> beans) {
+        final List<BeanDTO> beanNodes = beans.stream()
+                .map(bean -> transformToBeanDTO(bean, contextMetadata))
                 .collect(Collectors.toList());
-        graph.createNodes(beanNodes);
-        return beanNodes;
+        return graph.createNodes(beanNodes);
     }
 
-    private void createRelations(ContextMetadata contextMetadata, List<BeanMetadata> beans, List<BeanNode> beanNodes) {
+    private void createRelations(ContextMetadata contextMetadata, List<BeanMetadata> beans, List<BeanDTO> beanNodes) {
         log.info("Processing dependencies of context: {}", contextMetadata.getContext());
 
-        final List<DependsOnRelation> dependencies = beans.stream()
-                .filter(bean -> bean.getDependencies() != null && !bean.getDependencies().isEmpty())
-                .map(bean -> createRelationships(bean, beanNodes))
+        final List<DependencyDTO> dependencies = beans.stream()
+                .map(this::createRelationships)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
 
@@ -90,33 +93,24 @@ class AnalyzerService {
         labels.forEach((label, regexp) -> graph.addLabels(new RegexpFieldCondition(field, regexp), label));
     }
 
-    private List<DependsOnRelation> createRelationships(BeanMetadata bean, List<BeanNode> allNodes) throws RuntimeException {
-        final BeanNode startNode = findNode(bean.getBean(), allNodes);
-
-        return bean.getDependencies().stream()
-                .map(dependency -> findNode(dependency, allNodes))
-                .filter(Objects::nonNull)
-                .map(dependency -> DependsOnRelation.builder()
-                        .bean(startNode)
-                        .dependency(dependency)
+    private List<DependencyDTO> createRelationships(BeanMetadata bean) {
+        return Optional.ofNullable(bean.getDependencies())
+                .map(Collection::stream).orElseGet(Stream::empty)
+                .map(dependency -> DependencyDTO.builder()
+                        .bean(bean.getBean())
+                        .dependsOn(dependency)
                         .build())
                 .collect(Collectors.toList());
     }
 
-    private BeanNode findNode(String name, List<BeanNode> allNodes){
-        return allNodes.stream()
-                .filter(node -> node.getName().equals(name))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private BeanNode transformToNode(BeanMetadata bean, ContextMetadata context) {
+    private BeanDTO transformToBeanDTO(BeanMetadata bean, ContextMetadata context) {
         log.info("Processing model: {}", bean.getBean());
 
-        return BeanNode.builder()
+        return BeanDTO.builder()
                 .name(bean.getBean())
                 .scope(bean.getScope())
                 .type(bean.getType())
+                .context(context.getContext())
                 .build();
     }
 }

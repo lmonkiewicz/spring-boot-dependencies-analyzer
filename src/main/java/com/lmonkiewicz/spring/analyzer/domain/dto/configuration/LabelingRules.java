@@ -1,4 +1,4 @@
-package com.lmonkiewicz.spring.analyzer.domain;
+package com.lmonkiewicz.spring.analyzer.domain.dto.configuration;
 
 import lombok.Builder;
 import lombok.Value;
