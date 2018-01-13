@@ -1,6 +1,6 @@
 package com.lmonkiewicz.spring.analyzer.app;
 
-import com.lmonkiewicz.spring.analyzer.domain.properties.AnalyzerProperties;
+import com.lmonkiewicz.spring.analyzer.config.properties.AnalyzerProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

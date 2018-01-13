@@ -1,9 +1,9 @@
 package com.lmonkiewicz.spring.analyzer.domain;
 
+import com.lmonkiewicz.spring.analyzer.config.properties.AnalyzerProperties;
 import com.lmonkiewicz.spring.analyzer.domain.exception.AnalyzerException;
 import com.lmonkiewicz.spring.analyzer.domain.ports.GraphPort;
 import com.lmonkiewicz.spring.analyzer.domain.ports.MetadataProviderPort;
-import com.lmonkiewicz.spring.analyzer.domain.properties.AnalyzerProperties;
 
 import java.io.IOException;
 

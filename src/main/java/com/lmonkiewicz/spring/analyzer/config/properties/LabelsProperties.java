@@ -1,4 +1,4 @@
-package com.lmonkiewicz.spring.analyzer.domain.properties;
+package com.lmonkiewicz.spring.analyzer.config.properties;
 
 import lombok.Data;
 

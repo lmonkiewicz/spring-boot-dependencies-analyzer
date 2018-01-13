@@ -2,12 +2,12 @@ package com.lmonkiewicz.spring.analyzer.adapter.metadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lmonkiewicz.spring.analyzer.config.properties.AnalyzerProperties;
+import com.lmonkiewicz.spring.analyzer.config.properties.SourceProperties;
 import com.lmonkiewicz.spring.analyzer.domain.metadata.ApplicationMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.metadata.BeanMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.metadata.ContextMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.ports.MetadataProviderPort;
-import com.lmonkiewicz.spring.analyzer.domain.properties.AnalyzerProperties;
-import com.lmonkiewicz.spring.analyzer.domain.properties.SourceProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 

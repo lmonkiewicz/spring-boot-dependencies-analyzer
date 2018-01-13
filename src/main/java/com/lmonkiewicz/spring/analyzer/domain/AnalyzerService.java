@@ -6,44 +6,38 @@ import com.lmonkiewicz.spring.analyzer.domain.condition.RegexpFieldCondition;
 import com.lmonkiewicz.spring.analyzer.domain.metadata.ApplicationMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.metadata.BeanMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.metadata.ContextMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.ports.ConfigurationPort;
 import com.lmonkiewicz.spring.analyzer.domain.ports.GraphPort;
 import com.lmonkiewicz.spring.analyzer.domain.ports.MetadataProviderPort;
-import com.lmonkiewicz.spring.analyzer.domain.properties.AnalyzerProperties;
-import com.lmonkiewicz.spring.analyzer.domain.properties.LabelsProperties;
-import com.lmonkiewicz.spring.analyzer.domain.properties.RulesProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Service
 @Slf4j
 class AnalyzerService {
 
-    private final MetadataProviderPort metadataProviderPort;
-    private final AnalyzerProperties analyzerProperties;
-    private final GraphPort graphPort;
+    private final MetadataProviderPort metadataProvider;
+    private final ConfigurationPort config;
+    private final GraphPort graph;
 
-    @Autowired
-    public AnalyzerService(MetadataProviderPort metadataProviderPort,
-                           AnalyzerProperties analyzerProperties,
-                           GraphPort graphPort) {
-        this.metadataProviderPort = metadataProviderPort;
-        this.analyzerProperties = analyzerProperties;
-        this.graphPort = graphPort;
+    public AnalyzerService(MetadataProviderPort metadataProvider,
+                           ConfigurationPort config,
+                           GraphPort graph) {
+        this.metadataProvider = metadataProvider;
+        this.config = config;
+        this.graph = graph;
     }
 
     public void processData() throws IOException {
 
         log.info("Loading beans data");
-        ApplicationMetadata applicationMetadata = metadataProviderPort.getApplicationInfo();
+        ApplicationMetadata applicationMetadata = metadataProvider.getApplicationInfo();
 
-        if (analyzerProperties.isClearOnStart()) {
-            log.info("Clearing database");
-            graphPort.clear();
+        if (config.isClearGraphOnStartup()) {
+            log.info("Clearing graph");
+            graph.clear();
         }
 
         log.info("Populating database...");
@@ -66,7 +60,7 @@ class AnalyzerService {
         final List<BeanNode> beanNodes = beans.stream()
                 .map(bean -> transformToNode(bean, contextMetadata))
                 .collect(Collectors.toList());
-        graphPort.createNodes(beanNodes);
+        graph.createNodes(beanNodes);
         return beanNodes;
     }
 
@@ -79,23 +73,21 @@ class AnalyzerService {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
 
-        graphPort.createNodeRelations(dependencies);
+        graph.createNodeRelations(dependencies);
     }
 
     private void createLabels() {
         log.info("Adding labels");
-        final Optional<LabelsProperties> labelsProperties = Optional.ofNullable(analyzerProperties.getRules())
-                .map(RulesProperties::getLabels);
 
-        labelsProperties.map(LabelsProperties::getType).ifPresent(labels -> createLabelsByRegexp("type", labels));
-        labelsProperties.map(LabelsProperties::getName).ifPresent(labels -> createLabelsByRegexp("name", labels));
-        labelsProperties.map(LabelsProperties::getScope).ifPresent(labels -> createLabelsByRegexp("scope", labels));
+        final Optional<LabelingRules> labelingRules = config.getLabelingRules();
 
-
+        labelingRules.map(LabelingRules::getType).ifPresent(labels -> createLabelsByRegexp("type", labels));
+        labelingRules.map(LabelingRules::getName).ifPresent(labels -> createLabelsByRegexp("name", labels));
+        labelingRules.map(LabelingRules::getScope).ifPresent(labels -> createLabelsByRegexp("scope", labels));
     }
 
     private void createLabelsByRegexp(final String field, final Map<String, String> labels) {
-        labels.forEach((label, regexp) -> graphPort.addLabels(new RegexpFieldCondition(field, regexp), label));
+        labels.forEach((label, regexp) -> graph.addLabels(new RegexpFieldCondition(field, regexp), label));
     }
 
     private List<DependsOnRelation> createRelationships(BeanMetadata bean, List<BeanNode> allNodes) throws RuntimeException {
