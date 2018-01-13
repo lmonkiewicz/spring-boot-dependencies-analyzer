@@ -1,4 +1,4 @@
-package com.lmonkiewicz.spring.analyzer.metadata;
+package com.lmonkiewicz.spring.analyzer.domain.metadata;
 
 import lombok.*;
 

@@ -1,17 +1,17 @@
-package com.lmonkiewicz.spring.analyzer;
+package com.lmonkiewicz.spring.analyzer.domain;
 
-import com.lmonkiewicz.spring.analyzer.config.AnalyzerProperties;
-import com.lmonkiewicz.spring.analyzer.config.LabelsProperties;
-import com.lmonkiewicz.spring.analyzer.config.RulesProperties;
-import com.lmonkiewicz.spring.analyzer.metadata.ApplicationMetadata;
-import com.lmonkiewicz.spring.analyzer.metadata.BeanMetadata;
-import com.lmonkiewicz.spring.analyzer.metadata.ContextMetadata;
-import com.lmonkiewicz.spring.analyzer.neo4j.BeanRepository;
-import com.lmonkiewicz.spring.analyzer.neo4j.DependsOnRepository;
-import com.lmonkiewicz.spring.analyzer.neo4j.model.BeanNode;
-import com.lmonkiewicz.spring.analyzer.neo4j.model.DependsOnRelation;
+import com.lmonkiewicz.spring.analyzer.adapter.neo4j.model.BeanNode;
+import com.lmonkiewicz.spring.analyzer.adapter.neo4j.model.DependsOnRelation;
+import com.lmonkiewicz.spring.analyzer.domain.condition.RegexpFieldCondition;
+import com.lmonkiewicz.spring.analyzer.domain.metadata.ApplicationMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.metadata.BeanMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.metadata.ContextMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.ports.GraphPort;
+import com.lmonkiewicz.spring.analyzer.domain.ports.MetadataProviderPort;
+import com.lmonkiewicz.spring.analyzer.domain.properties.AnalyzerProperties;
+import com.lmonkiewicz.spring.analyzer.domain.properties.LabelsProperties;
+import com.lmonkiewicz.spring.analyzer.domain.properties.RulesProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.neo4j.ogm.session.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,34 +23,27 @@ import java.util.stream.Collectors;
 @Slf4j
 class AnalyzerService {
 
-    private final MetadataProvider metadataProvider;
-    private final BeanRepository beanRepository;
-    private final DependsOnRepository dependsOnRepository;
+    private final MetadataProviderPort metadataProviderPort;
     private final AnalyzerProperties analyzerProperties;
-    private final Session session;
+    private final GraphPort graphPort;
 
     @Autowired
-    public AnalyzerService(MetadataProvider metadataProvider,
-                           BeanRepository beanRepository,
-                           DependsOnRepository dependsOnRepository,
+    public AnalyzerService(MetadataProviderPort metadataProviderPort,
                            AnalyzerProperties analyzerProperties,
-                           Session session) {
-        this.metadataProvider = metadataProvider;
-        this.beanRepository = beanRepository;
-        this.dependsOnRepository = dependsOnRepository;
+                           GraphPort graphPort) {
+        this.metadataProviderPort = metadataProviderPort;
         this.analyzerProperties = analyzerProperties;
-        this.session = session;
+        this.graphPort = graphPort;
     }
 
     public void processData() throws IOException {
 
         log.info("Loading beans data");
-        ApplicationMetadata applicationMetadata = metadataProvider.getApplicationInfo();
+        ApplicationMetadata applicationMetadata = metadataProviderPort.getApplicationInfo();
 
         if (analyzerProperties.isClearOnStart()) {
             log.info("Clearing database");
-            dependsOnRepository.deleteAll();
-            beanRepository.deleteAll();
+            graphPort.clear();
         }
 
         log.info("Populating database...");
@@ -63,12 +56,21 @@ class AnalyzerService {
         log.info("Processing context: {}", contextMetadata.getContext());
         final List<BeanMetadata> beans = contextMetadata.getBeans();
 
+        final List<BeanNode> beanNodes = createNodes(contextMetadata, beans);
+
+        createRelations(contextMetadata, beans, beanNodes);
+        createLabels();
+    }
+
+    private List<BeanNode> createNodes(ContextMetadata contextMetadata, List<BeanMetadata> beans) {
         final List<BeanNode> beanNodes = beans.stream()
                 .map(bean -> transformToNode(bean, contextMetadata))
                 .collect(Collectors.toList());
+        graphPort.createNodes(beanNodes);
+        return beanNodes;
+    }
 
-        beanRepository.saveAll(beanNodes);
-
+    private void createRelations(ContextMetadata contextMetadata, List<BeanMetadata> beans, List<BeanNode> beanNodes) {
         log.info("Processing dependencies of context: {}", contextMetadata.getContext());
 
         final List<DependsOnRelation> dependencies = beans.stream()
@@ -77,12 +79,10 @@ class AnalyzerService {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
 
-        dependsOnRepository.saveAll(dependencies);
-
-        addLabels();
+        graphPort.createNodeRelations(dependencies);
     }
 
-    private void addLabels() {
+    private void createLabels() {
         log.info("Adding labels");
         final Optional<LabelsProperties> labelsProperties = Optional.ofNullable(analyzerProperties.getRules())
                 .map(RulesProperties::getLabels);
@@ -90,14 +90,12 @@ class AnalyzerService {
         labelsProperties.map(LabelsProperties::getType).ifPresent(labels -> createLabelsByRegexp("type", labels));
         labelsProperties.map(LabelsProperties::getName).ifPresent(labels -> createLabelsByRegexp("name", labels));
         labelsProperties.map(LabelsProperties::getScope).ifPresent(labels -> createLabelsByRegexp("scope", labels));
+
+
     }
 
     private void createLabelsByRegexp(final String field, final Map<String, String> labels) {
-        labels.forEach((label, regexp) -> {
-            final String query = String.format("MATCH (n) WHERE n.%s =~ '%s' SET n :%s", field, regexp, label);
-            log.info("Setting labels with query: {}", query);
-            session.query(query, new HashMap<>());
-        });
+        labels.forEach((label, regexp) -> graphPort.addLabels(new RegexpFieldCondition(field, regexp), label));
     }
 
     private List<DependsOnRelation> createRelationships(BeanMetadata bean, List<BeanNode> allNodes) throws RuntimeException {

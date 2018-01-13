@@ -1,13 +1,15 @@
-package com.lmonkiewicz.spring.analyzer.metadata;
+package com.lmonkiewicz.spring.analyzer.adapter.metadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lmonkiewicz.spring.analyzer.MetadataProvider;
-import com.lmonkiewicz.spring.analyzer.config.AnalyzerProperties;
-import com.lmonkiewicz.spring.analyzer.config.SourceProperties;
+import com.lmonkiewicz.spring.analyzer.domain.metadata.ApplicationMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.metadata.BeanMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.metadata.ContextMetadata;
+import com.lmonkiewicz.spring.analyzer.domain.ports.MetadataProviderPort;
+import com.lmonkiewicz.spring.analyzer.domain.properties.AnalyzerProperties;
+import com.lmonkiewicz.spring.analyzer.domain.properties.SourceProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,16 +17,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-@Service
 @Slf4j
-public class DefaultMetadataProvider implements MetadataProvider {
+public class DefaultMetadataProviderAdapter implements MetadataProviderPort {
 
 
     private final AnalyzerProperties analyzerProperties;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public DefaultMetadataProvider(AnalyzerProperties analyzerProperties, ObjectMapper objectMapper) {
+    public DefaultMetadataProviderAdapter(AnalyzerProperties analyzerProperties, ObjectMapper objectMapper) {
         this.analyzerProperties = analyzerProperties;
         this.objectMapper = objectMapper;
     }
@@ -49,7 +50,7 @@ public class DefaultMetadataProvider implements MetadataProvider {
 
     private ApplicationMetadata loadFromResource(String resource) throws IOException {
         log.info("Loading beans metadata from resource: {}", resource);
-        final InputStream inputStream = DefaultMetadataProvider.class.getResourceAsStream(resource);
+        final InputStream inputStream = DefaultMetadataProviderAdapter.class.getResourceAsStream(resource);
 
         final List<ContextMetadata> contexts = objectMapper.readValue(inputStream,  new TypeReference<List<ContextMetadata>>(){});
 

@@ -1,4 +1,4 @@
-package com.lmonkiewicz.spring.analyzer.neo4j.model;
+package com.lmonkiewicz.spring.analyzer.adapter.neo4j.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
