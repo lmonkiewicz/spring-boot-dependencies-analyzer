@@ -13,7 +13,7 @@ import java.util.Set;
 @Data
 @NodeEntity(label = "BEAN")
 @Builder
-public class BeanNode {
+class BeanNode {
 
     @Id
     @GeneratedValue

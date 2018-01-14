@@ -7,7 +7,6 @@ import com.lmonkiewicz.spring.analyzer.config.properties.SourceProperties;
 import com.lmonkiewicz.spring.analyzer.domain.dto.metadata.ApplicationMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.dto.metadata.BeanMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.dto.metadata.ContextMetadata;
-import com.lmonkiewicz.spring.analyzer.domain.ports.MetadataProviderPort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -18,14 +17,14 @@ import java.util.List;
 import java.util.Optional;
 
 @Slf4j
-public class DefaultMetadataProviderAdapter implements MetadataProviderPort {
+public class DefaultMetadataProvider implements MetadataProvider {
 
 
     private final AnalyzerProperties analyzerProperties;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public DefaultMetadataProviderAdapter(AnalyzerProperties analyzerProperties, ObjectMapper objectMapper) {
+    public DefaultMetadataProvider(AnalyzerProperties analyzerProperties, ObjectMapper objectMapper) {
         this.analyzerProperties = analyzerProperties;
         this.objectMapper = objectMapper;
     }
@@ -50,7 +49,7 @@ public class DefaultMetadataProviderAdapter implements MetadataProviderPort {
 
     private ApplicationMetadata loadFromResource(String resource) throws IOException {
         log.info("Loading beans metadata from resource: {}", resource);
-        final InputStream inputStream = DefaultMetadataProviderAdapter.class.getResourceAsStream(resource);
+        final InputStream inputStream = DefaultMetadataProvider.class.getResourceAsStream(resource);
 
         final List<ContextMetadata> contexts = objectMapper.readValue(inputStream,  new TypeReference<List<ContextMetadata>>(){});
 

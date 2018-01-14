@@ -11,4 +11,5 @@ public class LabelingRules {
     private final Map<String,String> type;
     private final Map<String,String> name;
     private final Map<String,String> scope;
+    private final Map<String,String> context;
 }

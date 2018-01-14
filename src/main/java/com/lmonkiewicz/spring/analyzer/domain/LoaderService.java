@@ -9,10 +9,8 @@ import com.lmonkiewicz.spring.analyzer.domain.dto.metadata.BeanMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.dto.metadata.ContextMetadata;
 import com.lmonkiewicz.spring.analyzer.domain.ports.ConfigurationPort;
 import com.lmonkiewicz.spring.analyzer.domain.ports.GraphPort;
-import com.lmonkiewicz.spring.analyzer.domain.ports.MetadataProviderPort;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -21,34 +19,27 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-class AnalyzerService {
+class LoaderService {
 
-    private final MetadataProviderPort metadataProvider;
     private final ConfigurationPort config;
     private final GraphPort graph;
 
-    public AnalyzerService(MetadataProviderPort metadataProvider,
-                           ConfigurationPort config,
-                           GraphPort graph) {
-        this.metadataProvider = metadataProvider;
+    public LoaderService(ConfigurationPort config, GraphPort graph) {
         this.config = config;
         this.graph = graph;
     }
 
-    public void processData() throws IOException {
+    public void clearGraph() {
+        log.info("Clearing graph");
+        graph.clear();
+    }
 
-        log.info("Loading beans data");
-        ApplicationMetadata applicationMetadata = metadataProvider.getApplicationInfo();
-
-        if (config.isClearGraphOnStartup()) {
-            log.info("Clearing graph");
-            graph.clear();
+    public void loadIntoGraph(ApplicationMetadata applicationMetadata, boolean clearGraphBeforeLoad) {
+        if (clearGraphBeforeLoad) {
+            clearGraph();
         }
-
-        log.info("Populating database...");
+        log.info("Populating graph...");
         applicationMetadata.getContexts().forEach(this::processContext);
-
-        log.info("Done");
     }
 
     private void processContext(ContextMetadata contextMetadata) {
@@ -87,6 +78,7 @@ class AnalyzerService {
         labelingRules.map(LabelingRules::getType).ifPresent(labels -> createLabelsByRegexp("type", labels));
         labelingRules.map(LabelingRules::getName).ifPresent(labels -> createLabelsByRegexp("name", labels));
         labelingRules.map(LabelingRules::getScope).ifPresent(labels -> createLabelsByRegexp("scope", labels));
+        labelingRules.map(LabelingRules::getContext).ifPresent(labels -> createLabelsByRegexp("context", labels));
     }
 
     private void createLabelsByRegexp(final String field, final Map<String, String> labels) {
@@ -104,7 +96,9 @@ class AnalyzerService {
     }
 
     private BeanDTO transformToBeanDTO(BeanMetadata bean, ContextMetadata context) {
-        log.info("Processing model: {}", bean.getBean());
+        if (log.isTraceEnabled()) {
+            log.trace("Processing model: {}", bean.getBean());
+        }
 
         return BeanDTO.builder()
                 .name(bean.getBean())

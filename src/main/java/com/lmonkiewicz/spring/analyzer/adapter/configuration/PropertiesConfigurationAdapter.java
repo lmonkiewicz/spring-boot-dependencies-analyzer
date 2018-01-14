@@ -19,11 +19,6 @@ public class PropertiesConfigurationAdapter implements ConfigurationPort {
     }
 
     @Override
-    public boolean isClearGraphOnStartup() {
-        return analyzerProperties.isClearOnStart();
-    }
-
-    @Override
     public Optional<LabelingRules> getLabelingRules() {
         return Optional.ofNullable(analyzerProperties.getRules())
                 .map(RulesProperties::getLabels)
